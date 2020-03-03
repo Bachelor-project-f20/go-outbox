@@ -1,12 +1,14 @@
 package outbox_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/dueruen/go-outbox"
 )
 
 var db outbox.Outbox
+var rel outbox.Relay
 
 type testSchema struct {
 	ID   string
@@ -22,8 +24,31 @@ func TestNewOutbox(t *testing.T) {
 	db = out
 }
 
+func TestNewRelay(t *testing.T) {
+	r, err := outbox.NewRelay(db.GetDBConnection())
+	if err != nil {
+		t.Error(err)
+	}
+	rel = r
+}
+
 func TestInsert(t *testing.T) {
 	err := db.Insert(testSchema{"1", "Bob", 29}, outbox.Event{"id", "pub", "name", 23, []byte("hello")})
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestListen(t *testing.T) {
+	err := rel.Listen(5, func(e []outbox.Event) {
+		if len(e) == 0 {
+			fmt.Println("No events, oh no")
+			t.Error()
+		}
+		fmt.Println("found Event: ", e[0].ID)
+		t.SkipNow()
+	})
+
 	if err != nil {
 		t.Error(err)
 	}

@@ -20,6 +20,7 @@ type Outbox interface {
 	Insert(obj interface{}, e Event) error
 	Update(obj interface{}, e Event) error
 	Delete(obj interface{}, e Event) error
+	GetDBConnection() *gorm.DB
 	Close()
 }
 
@@ -33,10 +34,6 @@ type Event struct {
 	EventName string
 	Timestamp int64
 	Payload   []byte
-}
-
-type Storage struct {
-	db *gorm.DB
 }
 
 func NewOutbox(dbType DbType, dbString string, schemas ...interface{}) (Outbox, error) {
@@ -126,4 +123,8 @@ func getType(dbType DbType) string {
 		return "postgres"
 	}
 	panic("Database type not supported")
+}
+
+func (s *Storage) GetDBConnection() *gorm.DB {
+	return s.db
 }
