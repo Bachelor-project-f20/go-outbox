@@ -39,21 +39,6 @@ func TestInsert(t *testing.T) {
 	}
 }
 
-func TestListen(t *testing.T) {
-	err := rel.Listen(5, func(e []outbox.Event) {
-		if len(e) == 0 {
-			fmt.Println("No events, oh no")
-			t.Error()
-		}
-		fmt.Println("found Event: ", e[0].ID)
-		t.SkipNow()
-	})
-
-	if err != nil {
-		t.Error(err)
-	}
-}
-
 func TestUpdate(t *testing.T) {
 	err := db.Update(testSchema{"1", "Bob", 30}, outbox.Event{"id2", "pub", "name", 23, []byte("hello")})
 	if err != nil {
@@ -63,6 +48,22 @@ func TestUpdate(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	err := db.Delete(testSchema{"1", "Bob", 30}, outbox.Event{"id3", "pub", "name", 23, []byte("hello")})
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestListen(t *testing.T) {
+	err := rel.ListenForTesting(5, func(e []outbox.Event) bool {
+		if len(e) == 0 {
+			fmt.Println("No events, oh no")
+			t.Error()
+			return false
+		}
+		fmt.Println("found Event: ", e[0].ID)
+		return true
+	})
+
 	if err != nil {
 		t.Error(err)
 	}

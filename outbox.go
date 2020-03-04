@@ -28,6 +28,10 @@ type schemaType struct {
 	schema interface{}
 }
 
+type Storage struct {
+	db *gorm.DB
+}
+
 type Event struct {
 	ID        string
 	Publisher string
