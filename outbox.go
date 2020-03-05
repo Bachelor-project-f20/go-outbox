@@ -10,10 +10,16 @@ import (
 )
 
 type DbType int
+type EventStatus int
 
 const (
 	MySQL DbType = iota
 	Postgres
+)
+
+const (
+	NEW EventStatus = iota
+	SENDING
 )
 
 type Outbox interface {
@@ -40,7 +46,17 @@ type Event struct {
 	Payload   []byte
 }
 
-func NewOutbox(dbType DbType, dbString string, schemas ...interface{}) (Outbox, error) {
+type DbEvent struct {
+	ID         string
+	Publisher  string
+	EventName  string
+	Timestamp  int64
+	Payload    []byte
+	InsertTime int64
+	Status     EventStatus
+}
+
+func NewOutbox(dbType DbType, dbString string, emitter EventEmitter, schemas ...interface{}) (Outbox, error) {
 	db := connect(dbType, dbString)
 
 	schemaTypes := make([]interface{}, 0)
@@ -48,21 +64,29 @@ func NewOutbox(dbType DbType, dbString string, schemas ...interface{}) (Outbox, 
 		schemaTypes = append(schemaTypes, schema)
 	}
 
-	schemaTypes = append(schemaTypes, Event{})
+	schemaTypes = append(schemaTypes, DbEvent{})
 
 	err := createSchema(db, schemaTypes)
 	if err != nil {
 		return nil, err
 	}
+
+	r, err := NewRelay(db)
+	if err != nil {
+		return nil, err
+	}
+	r.Listen(2, 10000, emitter)
+
 	return &Storage{db: db}, nil
 }
 
 func (s *Storage) Insert(obj interface{}, e Event) error {
+	dbEvent := createDbEvent(e)
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(obj).Error; err != nil {
 			return err
 		}
-		if err := tx.Create(e).Error; err != nil {
+		if err := tx.Create(dbEvent).Error; err != nil {
 			return err
 		}
 		return nil
@@ -70,11 +94,12 @@ func (s *Storage) Insert(obj interface{}, e Event) error {
 }
 
 func (s *Storage) Update(obj interface{}, e Event) error {
+	dbEvent := createDbEvent(e)
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(obj).Error; err != nil {
 			return err
 		}
-		if err := tx.Create(e).Error; err != nil {
+		if err := tx.Create(dbEvent).Error; err != nil {
 			return err
 		}
 		return nil
@@ -82,15 +107,27 @@ func (s *Storage) Update(obj interface{}, e Event) error {
 }
 
 func (s *Storage) Delete(obj interface{}, e Event) error {
+	dbEvent := createDbEvent(e)
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Delete(obj).Error; err != nil {
 			return err
 		}
-		if err := tx.Create(e).Error; err != nil {
+		if err := tx.Create(dbEvent).Error; err != nil {
 			return err
 		}
 		return nil
 	})
+}
+
+func createDbEvent(e Event) DbEvent {
+	return DbEvent{
+		e.ID,
+		e.Publisher,
+		e.EventName,
+		e.Timestamp,
+		e.Payload,
+		time.Now().UnixNano() / 1000000, //to millis
+		NEW}
 }
 
 func createSchema(db *gorm.DB, schemaModels []interface{}) error {
