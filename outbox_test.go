@@ -37,6 +37,11 @@ func TestInsert(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
+	err = db.Insert(testSchema{"2", "Bob", 29}, outbox.Event{"ID-02-IN", "pub", "name", 23, []byte("hello")})
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func TestUpdate(t *testing.T) {

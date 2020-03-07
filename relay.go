@@ -2,94 +2,72 @@ package outbox
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/jinzhu/gorm"
 )
 
-type Relay interface {
-	Listen(pollWait, sendWait time.Duration, emitter EventEmitter)
-	ListenDebug(pollWait, sendWait time.Duration, emitter EventEmitter, debug bool)
+type relay struct {
+	db        *gorm.DB
+	eventChan chan DbEvent
 }
 
-func NewRelay(db *gorm.DB) (Relay, error) {
-	return &Storage{db: db}, nil
+func NewRelay(db *gorm.DB, pollWait time.Duration, eventChan chan DbEvent, emitter EventEmitter) error {
+	r := relay{
+		db,
+		eventChan,
+	}
+	r.findEvent(eventChan, pollWait)
+	r.sendEvent(eventChan, emitter)
+	return nil
 }
 
-func (s *Storage) Listen(pollWait, sendWait time.Duration, emitter EventEmitter) {
-	s.ListenDebug(pollWait, sendWait, emitter, false)
-}
-
-func (s *Storage) ListenDebug(pollWait, sendWait time.Duration, emitter EventEmitter, debug bool) {
-	eventChan := make(chan DbEvent, 10)
-	//errorsChan := make(chan error)
-
+func (s *relay) findEvent(c chan<- DbEvent, pollWait time.Duration) {
 	go func() {
 		for {
-			s.findEvent(eventChan, pollWait, sendWait)
-			s.sendEvent(eventChan, emitter, debug)
+			time.Sleep(10 * time.Millisecond)
+			var events []DbEvent
+			tx := s.db.Begin()
+			testTime := (time.Now().UnixNano() / 1000000) - pollWait.Milliseconds()
+			tx.Not("service_id = ?", serviceID).Where("insert_time < ?", testTime).Find(&events)
+			s.checkEvents(events, c, tx)
+			tx.Commit()
 		}
 	}()
-
-	fmt.Println("Here 02")
 }
 
-func (s *Storage) findEvent(c chan<- DbEvent, pollWait, sendWait time.Duration) {
-	// go func() {
-	// 	for {
-	fmt.Println("FindEvent")
-	var events []DbEvent
-	testTime := (time.Now().UnixNano() / 1000000) - sendWait.Milliseconds()
-	s.db.Where("status = ?", NEW).Or("status = ? AND insert_time < ?", SENDING, testTime).Find(&events)
-	s.checkEvents(events, c)
-	// 	}
-	// }()
+func (s *relay) sendEvent(c <-chan DbEvent, emitter EventEmitter) {
+	go func() {
+		for {
+			e, ok := <-c
+			if !ok {
+				log.Println("SendEvent, broken loop. BREAKING")
+			}
+			fmt.Println("Sending event: ", e.ID)
+			err := emitter.Emit(Event{
+				ID:        e.ID,
+				EventName: e.EventName,
+				Payload:   e.Payload,
+				Publisher: e.Publisher,
+				Timestamp: e.Timestamp,
+			})
+			if err != nil {
+				log.Println("SendEvent, Send Error. CONTINUE")
+			}
+			s.deleteEvent(e)
+		}
+	}()
 }
 
-func (s *Storage) sendEvent(c <-chan DbEvent, emitter EventEmitter, debug bool) {
-	// go func() {
-	// 	for {
-	e, ok := <-c
-	if !ok {
-		fmt.Println("SendEvent, broken loop. BREAKING")
-		//break
-	}
-	err := emitter.Emit(Event{
-		ID:        e.ID,
-		EventName: e.EventName,
-		Payload:   e.Payload,
-		Publisher: e.Publisher,
-		Timestamp: e.Timestamp,
-	})
-	if err != nil {
-		fmt.Println("SendEvent, Send Error. CONTINUE")
-		//continue
-	}
-	s.deleteEvent(e)
-	// 		if debug {
-	// 			return
-	// 		}
-	// 	}
-	// }()
-}
-
-func (s *Storage) deleteEvent(event DbEvent) {
-	fmt.Println("Deleting event: ", event.ID)
+func (s *relay) deleteEvent(event DbEvent) {
 	s.db.Delete(&event)
 }
 
-func (s *Storage) checkEvents(events []DbEvent, c chan<- DbEvent) {
+func (s *relay) checkEvents(events []DbEvent, c chan<- DbEvent, tx *gorm.DB) {
 	for _, event := range events {
-		if event.Status == NEW {
-			fmt.Println("NEW Start sending event: ", event.ID)
-			event.Status = SENDING
-			s.db.Model(&event).Update(DbEvent{InsertTime: event.InsertTime, Status: event.Status})
-			c <- event
-		} else if event.Status == SENDING {
-			fmt.Println("RE-SENDING event: ", event.ID)
-			event.InsertTime = time.Now().UnixNano() / 1000000
-			s.db.Model(&event).Update(DbEvent{InsertTime: event.InsertTime})
-			c <- event
-		}
+		event.InsertTime = time.Now().UnixNano() / 1000000
+		tx.Model(&event).Update(DbEvent{InsertTime: event.InsertTime, ServiceID: serviceID})
+		c <- event
 	}
 }
