@@ -1,13 +1,16 @@
 package outbox
 
 import (
-	"fmt"
+	"log"
 	"time"
 
+	"github.com/gofrs/uuid"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 )
+
+var serviceID string
 
 type DbType int
 
@@ -15,13 +18,6 @@ const (
 	MySQL DbType = iota
 	Postgres
 )
-
-type Outbox interface {
-	Insert(obj interface{}, e Event) error
-	Update(obj interface{}, e Event) error
-	Delete(obj interface{}, e Event) error
-	Close()
-}
 
 type schemaType struct {
 	schema interface{}
@@ -35,11 +31,33 @@ type Event struct {
 	Payload   []byte
 }
 
-type Storage struct {
-	db *gorm.DB
+type DbEvent struct {
+	ID         string
+	Publisher  string
+	EventName  string
+	Timestamp  int64
+	Payload    []byte
+	InsertTime int64
+	ServiceID  string
 }
 
-func NewOutbox(dbType DbType, dbString string, schemas ...interface{}) (Outbox, error) {
+type Outbox interface {
+	Insert(obj interface{}, e Event) error
+	Update(obj interface{}, e Event) error
+	Delete(obj interface{}, e Event) error
+	GetDBConnection() *gorm.DB
+	Close()
+}
+
+type outbox struct {
+	db        *gorm.DB
+	eventChan chan DbEvent
+}
+
+func NewOutbox(dbType DbType, dbString string, emitter EventEmitter, schemas ...interface{}) (Outbox, error) {
+	newID, _ := uuid.NewV4()
+	serviceID = newID.String()
+
 	db := connect(dbType, dbString)
 
 	schemaTypes := make([]interface{}, 0)
@@ -47,49 +65,76 @@ func NewOutbox(dbType DbType, dbString string, schemas ...interface{}) (Outbox, 
 		schemaTypes = append(schemaTypes, schema)
 	}
 
-	schemaTypes = append(schemaTypes, Event{})
+	schemaTypes = append(schemaTypes, DbEvent{})
 
 	err := createSchema(db, schemaTypes)
 	if err != nil {
 		return nil, err
 	}
-	return &Storage{db: db}, nil
+
+	eventChan := make(chan DbEvent, 10)
+	err = NewRelay(db, 30, eventChan, emitter)
+	if err != nil {
+		return nil, err
+	}
+
+	return &outbox{
+		db,
+		eventChan,
+	}, nil
 }
 
-func (s *Storage) Insert(obj interface{}, e Event) error {
+func (s *outbox) Insert(obj interface{}, e Event) error {
+	dbEvent := createDbEvent(e)
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(obj).Error; err != nil {
 			return err
 		}
-		if err := tx.Create(e).Error; err != nil {
+		if err := tx.Create(dbEvent).Error; err != nil {
 			return err
 		}
+		s.eventChan <- dbEvent
 		return nil
 	})
 }
 
-func (s *Storage) Update(obj interface{}, e Event) error {
+func (s *outbox) Update(obj interface{}, e Event) error {
+	dbEvent := createDbEvent(e)
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(obj).Error; err != nil {
 			return err
 		}
-		if err := tx.Create(e).Error; err != nil {
+		if err := tx.Create(dbEvent).Error; err != nil {
 			return err
 		}
+		s.eventChan <- dbEvent
 		return nil
 	})
 }
 
-func (s *Storage) Delete(obj interface{}, e Event) error {
+func (s *outbox) Delete(obj interface{}, e Event) error {
+	dbEvent := createDbEvent(e)
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Delete(obj).Error; err != nil {
 			return err
 		}
-		if err := tx.Create(e).Error; err != nil {
+		if err := tx.Create(dbEvent).Error; err != nil {
 			return err
 		}
+		s.eventChan <- dbEvent
 		return nil
 	})
+}
+
+func createDbEvent(e Event) DbEvent {
+	return DbEvent{
+		e.ID,
+		e.Publisher,
+		e.EventName,
+		e.Timestamp,
+		e.Payload,
+		time.Now().UnixNano() / 1000000, //to millis
+		serviceID}
 }
 
 func createSchema(db *gorm.DB, schemaModels []interface{}) error {
@@ -97,7 +142,7 @@ func createSchema(db *gorm.DB, schemaModels []interface{}) error {
 	return nil
 }
 
-func (s *Storage) Close() {
+func (s *outbox) Close() {
 	s.db.Close()
 }
 
@@ -106,12 +151,12 @@ func connect(dbType DbType, dbString string) *gorm.DB {
 	for i > 0 {
 		db, err := gorm.Open(getType(dbType), dbString)
 		if err != nil {
-			fmt.Println("Can't connect to db, sleeping for 2 sec, err: ", err)
+			log.Println("Can't connect to db, sleeping for 2 sec, err: ", err)
 			time.Sleep(2 * time.Second)
 			i--
 			continue
 		} else {
-			fmt.Println("Connected to storage")
+			log.Println("Connected to storage")
 			return db
 		}
 	}
@@ -126,4 +171,8 @@ func getType(dbType DbType) string {
 		return "postgres"
 	}
 	panic("Database type not supported")
+}
+
+func (s *outbox) GetDBConnection() *gorm.DB {
+	return s.db
 }
