@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	etg "github.com/Bachelor-project-f20/eventToGo"
 	"github.com/gofrs/uuid"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
@@ -21,14 +22,6 @@ const (
 
 type schemaType struct {
 	schema interface{}
-}
-
-type Event struct {
-	ID        string
-	Publisher string
-	EventName string
-	Timestamp int64
-	Payload   []byte
 }
 
 type DbEvent struct {
@@ -54,7 +47,7 @@ type outbox struct {
 	eventChan chan DbEvent
 }
 
-func NewOutbox(dbType DbType, dbString string, emitter EventEmitter, schemas ...interface{}) (Outbox, error) {
+func NewOutbox(dbType DbType, dbString string, emitter etg.EventEmitter, schemas ...interface{}) (Outbox, error) {
 	newID, _ := uuid.NewV4()
 	serviceID = newID.String()
 

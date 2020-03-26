@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	etg "github.com/Bachelor-project-f20/eventToGo"
 	"github.com/jinzhu/gorm"
 )
 
@@ -13,7 +14,7 @@ type relay struct {
 	eventChan chan DbEvent
 }
 
-func NewRelay(db *gorm.DB, pollWait time.Duration, eventChan chan DbEvent, emitter EventEmitter) error {
+func NewRelay(db *gorm.DB, pollWait time.Duration, eventChan chan DbEvent, emitter etg.EventEmitter) error {
 	r := relay{
 		db,
 		eventChan,
@@ -37,7 +38,7 @@ func (s *relay) findEvent(c chan<- DbEvent, pollWait time.Duration) {
 	}()
 }
 
-func (s *relay) sendEvent(c <-chan DbEvent, emitter EventEmitter) {
+func (s *relay) sendEvent(c <-chan DbEvent, emitter etg.EventEmitter) {
 	go func() {
 		for {
 			e, ok := <-c
