@@ -3,7 +3,7 @@ package outbox_test
 import (
 	"testing"
 
-	"github.com/dueruen/go-outbox"
+	"github.com/Bachelor-project-f20/go-outbox"
 )
 
 func TestNewRelay(t *testing.T) {
