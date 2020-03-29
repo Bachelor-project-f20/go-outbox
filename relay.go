@@ -51,7 +51,7 @@ func (s *relay) sendEvent(c <-chan DbEvent, emitter etg.EventEmitter) {
 				EventName: e.EventName,
 				Payload:   e.Payload,
 				Publisher: e.Publisher,
-				TimeStamp: e.Timestamp,
+				Timestamp: e.Timestamp,
 			})
 			if err != nil {
 				log.Println("SendEvent, Send Error. CONTINUE")
