@@ -35,9 +35,9 @@ type DbEvent struct {
 }
 
 type Outbox interface {
-	Insert(obj interface{}, e etg.Event) error
-	Update(obj interface{}, e etg.Event) error
-	Delete(obj interface{}, e etg.Event) error
+	Insert(obj interface{}, e etg.BaseEvent) error
+	Update(obj interface{}, e etg.BaseEvent) error
+	Delete(obj interface{}, e etg.BaseEvent) error
 	GetDBConnection() *gorm.DB
 	Close()
 }
@@ -77,7 +77,7 @@ func NewOutbox(dbType DbType, dbString string, emitter etg.EventEmitter, schemas
 	}, nil
 }
 
-func (s *outbox) Insert(obj interface{}, e etg.Event) error {
+func (s *outbox) Insert(obj interface{}, e etg.BaseEvent) error {
 	dbEvent := createDbEvent(e)
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(obj).Error; err != nil {
@@ -91,7 +91,7 @@ func (s *outbox) Insert(obj interface{}, e etg.Event) error {
 	})
 }
 
-func (s *outbox) Update(obj interface{}, e etg.Event) error {
+func (s *outbox) Update(obj interface{}, e etg.BaseEvent) error {
 	dbEvent := createDbEvent(e)
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(obj).Error; err != nil {
@@ -105,7 +105,7 @@ func (s *outbox) Update(obj interface{}, e etg.Event) error {
 	})
 }
 
-func (s *outbox) Delete(obj interface{}, e etg.Event) error {
+func (s *outbox) Delete(obj interface{}, e etg.BaseEvent) error {
 	dbEvent := createDbEvent(e)
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Delete(obj).Error; err != nil {
@@ -119,7 +119,7 @@ func (s *outbox) Delete(obj interface{}, e etg.Event) error {
 	})
 }
 
-func createDbEvent(e etg.Event) DbEvent {
+func createDbEvent(e etg.BaseEvent) DbEvent {
 	return DbEvent{
 		e.GetID(),
 		e.GetPublisher(),
