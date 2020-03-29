@@ -1,5 +1,5 @@
-github.com/Bachelor-project-f20/eventToGo v0.1.0 h1:+oM4yhhfyQogtkgv0pzlIvTC1SU2gdS27n4+XVP7Pno=
-github.com/Bachelor-project-f20/eventToGo v0.1.0/go.mod h1:4KiRntKxouSCYWz/5PsOwvuYtMS68ax3XVeK+h2DCag=
+github.com/Bachelor-project-f20/eventToGo v0.1.7 h1:QYbDonTEPPmHfySuR6/jXhKl4z93ianEufM1SjJ3cfc=
+github.com/Bachelor-project-f20/eventToGo v0.1.7/go.mod h1:vcY8kBfUvmcg/HO4DKJYDQNwFYvwMBgKx4oWEVmx2KQ=
 github.com/denisenkom/go-mssqldb v0.0.0-20191124224453-732737034ffd/go.mod h1:xbL0rPBG9cCiLr28tMa8zpbdarY27NDyej4t/EjAShU=
 github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5/go.mod h1:a2zkGnVExMxdzMo3M0Hi/3sEU+cWnZpSni0O6/Yb/P0=
 github.com/go-sql-driver/mysql v1.4.1 h1:g24URVg0OFbNUTx9qqY1IRZ9D9z3iPyi5zKhQZpNwpA=

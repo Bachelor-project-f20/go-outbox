@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/dueruen/go-outbox"
+	"github.com/Bachelor-project-f20/go-outbox"
 )
 
 type testSchema struct {

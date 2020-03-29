@@ -46,12 +46,12 @@ func (s *relay) sendEvent(c <-chan DbEvent, emitter etg.EventEmitter) {
 				log.Println("SendEvent, broken loop. BREAKING")
 			}
 			fmt.Println("Sending event: ", e.ID)
-			err := emitter.Emit(Event{
+			err := emitter.Emit(etg.Event{
 				ID:        e.ID,
 				EventName: e.EventName,
 				Payload:   e.Payload,
 				Publisher: e.Publisher,
-				Timestamp: e.Timestamp,
+				TimeStamp: e.Timestamp,
 			})
 			if err != nil {
 				log.Println("SendEvent, Send Error. CONTINUE")
