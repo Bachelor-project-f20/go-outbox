@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	etg "github.com/Bachelor-project-f20/eventToGo"
 	"github.com/Bachelor-project-f20/go-outbox"
+	models "github.com/Bachelor-project-f20/shared/models"
 )
 
 type testSchema struct {
@@ -16,7 +16,7 @@ type testSchema struct {
 
 type mockEmitter struct{}
 
-func (m mockEmitter) Emit(e etg.Event) error {
+func (m mockEmitter) Emit(e models.Event) error {
 	fmt.Println("Emitting event: ", e.ID)
 	return nil
 }
@@ -33,13 +33,19 @@ func TestInsert(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-
-	err = db.Insert(testSchema{"1", "Bob", 29}, etg.Event{"ID-01-IN", "pub", "name", 23, []byte("hello")})
+	event := models.Event{}
+	event.ID = "ID-01-IN"
+	event.EventName = "pub"
+	event.Publisher = "name"
+	event.Timestamp = 23
+	event.Payload = []byte("hello")
+	err = db.Insert(testSchema{"1", "Bob", 29}, event)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = db.Insert(testSchema{"2", "Bob", 29}, etg.Event{"ID-02-IN", "pub", "name", 23, []byte("hello")})
+	event.ID = "ID-02-IN"
+	err = db.Insert(testSchema{"2", "Bob", 29}, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -51,7 +57,13 @@ func TestUpdate(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = db.Update(testSchema{"1", "Bob", 30}, etg.Event{"ID-02-UP", "pub", "name", 23, []byte("hello")})
+	event := models.Event{}
+	event.ID = "ID-02-UP"
+	event.EventName = "pub"
+	event.Publisher = "name"
+	event.Timestamp = 23
+	event.Payload = []byte("hello")
+	err = db.Update(testSchema{"1", "Bob", 30}, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -63,7 +75,13 @@ func TestDelete(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = db.Delete(testSchema{"1", "Bob", 30}, etg.Event{"ID-03-DE", "pub", "name", 23, []byte("hello")})
+	event := models.Event{}
+	event.ID = "ID-03-DE"
+	event.EventName = "pub"
+	event.Publisher = "name"
+	event.Timestamp = 23
+	event.Payload = []byte("hello")
+	err = db.Delete(testSchema{"1", "Bob", 30}, event)
 	if err != nil {
 		t.Error(err)
 	}

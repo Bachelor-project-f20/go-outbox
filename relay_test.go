@@ -3,8 +3,8 @@ package outbox_test
 import (
 	"testing"
 
-	etg "github.com/Bachelor-project-f20/eventToGo"
 	"github.com/Bachelor-project-f20/go-outbox"
+	models "github.com/Bachelor-project-f20/shared/models"
 )
 
 func TestNewRelay(t *testing.T) {
@@ -13,12 +13,19 @@ func TestNewRelay(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = out.Insert(testSchema{"r1", "Bob", 29}, etg.Event{"Relay01", "pub", "name", 23, []byte("hello")})
+	event := models.Event{}
+	event.ID = "Relay01"
+	event.EventName = "pub"
+	event.Publisher = "name"
+	event.Timestamp = 23
+	event.Payload = []byte("hello")
+	err = out.Insert(testSchema{"r1", "Bob", 29}, event)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = out.Insert(testSchema{"r2", "Bob", 29}, etg.Event{"Relay02", "pub", "name", 23, []byte("hello")})
+	event.ID = "Relay02"
+	err = out.Insert(testSchema{"r2", "Bob", 29}, event)
 	if err != nil {
 		t.Error(err)
 	}
