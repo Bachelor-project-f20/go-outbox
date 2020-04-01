@@ -5,6 +5,7 @@ import (
 	"time"
 
 	etg "github.com/Bachelor-project-f20/eventToGo"
+	models "github.com/Bachelor-project-f20/shared/models"
 	"github.com/gofrs/uuid"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
@@ -35,9 +36,9 @@ type DbEvent struct {
 }
 
 type Outbox interface {
-	Insert(obj interface{}, e etg.BaseEvent) error
-	Update(obj interface{}, e etg.BaseEvent) error
-	Delete(obj interface{}, e etg.BaseEvent) error
+	Insert(obj interface{}, e models.Event) error
+	Update(obj interface{}, e models.Event) error
+	Delete(obj interface{}, e models.Event) error
 	GetDBConnection() *gorm.DB
 	Close()
 }
@@ -77,7 +78,7 @@ func NewOutbox(dbType DbType, dbString string, emitter etg.EventEmitter, schemas
 	}, nil
 }
 
-func (s *outbox) Insert(obj interface{}, e etg.BaseEvent) error {
+func (s *outbox) Insert(obj interface{}, e models.Event) error {
 	dbEvent := createDbEvent(e)
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(obj).Error; err != nil {
@@ -91,7 +92,7 @@ func (s *outbox) Insert(obj interface{}, e etg.BaseEvent) error {
 	})
 }
 
-func (s *outbox) Update(obj interface{}, e etg.BaseEvent) error {
+func (s *outbox) Update(obj interface{}, e models.Event) error {
 	dbEvent := createDbEvent(e)
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(obj).Error; err != nil {
@@ -105,7 +106,7 @@ func (s *outbox) Update(obj interface{}, e etg.BaseEvent) error {
 	})
 }
 
-func (s *outbox) Delete(obj interface{}, e etg.BaseEvent) error {
+func (s *outbox) Delete(obj interface{}, e models.Event) error {
 	dbEvent := createDbEvent(e)
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Delete(obj).Error; err != nil {
@@ -119,13 +120,13 @@ func (s *outbox) Delete(obj interface{}, e etg.BaseEvent) error {
 	})
 }
 
-func createDbEvent(e etg.BaseEvent) DbEvent {
+func createDbEvent(e models.Event) DbEvent {
 	return DbEvent{
-		e.GetID(),
-		e.GetPublisher(),
-		e.GetEventName(),
-		e.GetTimestamp(),
-		e.GetPayload(),
+		e.ID,
+		e.Publisher,
+		e.EventName,
+		e.Timestamp,
+		e.Payload,
 		time.Now().UnixNano() / 1000000, //to millis
 		serviceID}
 }

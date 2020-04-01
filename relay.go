@@ -6,6 +6,7 @@ import (
 	"time"
 
 	etg "github.com/Bachelor-project-f20/eventToGo"
+	models "github.com/Bachelor-project-f20/shared/models"
 	"github.com/jinzhu/gorm"
 )
 
@@ -46,12 +47,12 @@ func (s *relay) sendEvent(c <-chan DbEvent, emitter etg.EventEmitter) {
 				log.Println("SendEvent, broken loop. BREAKING")
 			}
 			fmt.Println("Sending event: ", e.ID)
-			err := emitter.Emit(etg.Event{
+			err := emitter.Emit(models.Event{
 				ID:        e.ID,
 				EventName: e.EventName,
 				Payload:   e.Payload,
 				Publisher: e.Publisher,
-				TimeStamp: e.Timestamp,
+				Timestamp: e.Timestamp,
 			})
 			if err != nil {
 				log.Println("SendEvent, Send Error. CONTINUE")
