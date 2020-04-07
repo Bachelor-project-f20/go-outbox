@@ -48,11 +48,11 @@ type outbox struct {
 	eventChan chan DbEvent
 }
 
-func NewOutbox(dbType DbType, dbString string, emitter etg.EventEmitter, schemas ...interface{}) (Outbox, error) {
+func NewOutbox(dbType DbType, dbString string, connectionSleepInSec int, emitter etg.EventEmitter, schemas ...interface{}) (Outbox, error) {
 	newID, _ := uuid.NewV4()
 	serviceID = newID.String()
 
-	db := connect(dbType, dbString)
+	db := connect(dbType, dbString, connectionSleepInSec)
 
 	schemaTypes := make([]interface{}, 0)
 	for _, schema := range schemas {
@@ -140,13 +140,13 @@ func (s *outbox) Close() {
 	s.db.Close()
 }
 
-func connect(dbType DbType, dbString string) *gorm.DB {
+func connect(dbType DbType, dbString string, connectionSleepInSec int) *gorm.DB {
 	i := 5
 	for i > 0 {
 		db, err := gorm.Open(getType(dbType), dbString)
 		if err != nil {
 			log.Println("Can't connect to db, sleeping for 2 sec, err: ", err)
-			time.Sleep(2 * time.Second)
+			time.Sleep(time.Duration(connectionSleepInSec) * time.Second)
 			i--
 			continue
 		} else {
