@@ -8,7 +8,7 @@ import (
 )
 
 func TestNewRelay(t *testing.T) {
-	out, err := outbox.NewOutbox(outbox.MySQL, "root:root@/root?charset=utf8&parseTime=True&loc=Local", mockEmitter{}, testSchema{})
+	out, err := outbox.NewOutbox(outbox.MySQL, "root:root@/root?charset=utf8&parseTime=True&loc=Local", 10, mockEmitter{}, testSchema{})
 	if err != nil {
 		t.Error(err)
 	}

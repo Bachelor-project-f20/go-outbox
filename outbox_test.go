@@ -22,14 +22,14 @@ func (m mockEmitter) Emit(e models.Event) error {
 }
 
 func TestNewOutbox(t *testing.T) {
-	_, err := outbox.NewOutbox(outbox.MySQL, "root:root@/root?charset=utf8&parseTime=True&loc=Local", mockEmitter{}, testSchema{})
+	_, err := outbox.NewOutbox(outbox.MySQL, "root:root@/root?charset=utf8&parseTime=True&loc=Local", 10, mockEmitter{}, testSchema{})
 	if err != nil {
 		t.Error(err)
 	}
 }
 
 func TestInsert(t *testing.T) {
-	db, err := outbox.NewOutbox(outbox.MySQL, "root:root@/root?charset=utf8&parseTime=True&loc=Local", mockEmitter{}, testSchema{})
+	db, err := outbox.NewOutbox(outbox.MySQL, "root:root@/root?charset=utf8&parseTime=True&loc=Local", 10, mockEmitter{}, testSchema{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -52,7 +52,7 @@ func TestInsert(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	db, err := outbox.NewOutbox(outbox.MySQL, "root:root@/root?charset=utf8&parseTime=True&loc=Local", mockEmitter{}, testSchema{})
+	db, err := outbox.NewOutbox(outbox.MySQL, "root:root@/root?charset=utf8&parseTime=True&loc=Local", 10, mockEmitter{}, testSchema{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -70,7 +70,7 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	db, err := outbox.NewOutbox(outbox.MySQL, "root:root@/root?charset=utf8&parseTime=True&loc=Local", mockEmitter{}, testSchema{})
+	db, err := outbox.NewOutbox(outbox.MySQL, "root:root@/root?charset=utf8&parseTime=True&loc=Local", 10, mockEmitter{}, testSchema{})
 	if err != nil {
 		t.Error(err)
 	}
