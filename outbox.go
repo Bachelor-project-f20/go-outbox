@@ -33,6 +33,7 @@ type DbEvent struct {
 	Payload    []byte
 	InsertTime int64
 	ServiceID  string
+	ApiTag     string
 }
 
 type Outbox interface {
@@ -128,7 +129,8 @@ func createDbEvent(e models.Event) DbEvent {
 		e.Timestamp,
 		e.Payload,
 		time.Now().UnixNano() / 1000000, //to millis
-		serviceID}
+		serviceID,
+		e.ApiTag}
 }
 
 func createSchema(db *gorm.DB, schemaModels []interface{}) error {
